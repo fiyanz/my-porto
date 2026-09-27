@@ -89,6 +89,13 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
+## Deployment & Keep-Alive (Render & Supabase)
+
+Untuk mencegah backend di **Render** mengalami auto-suspend (sleep setelah 15 menit) dan database **Supabase** mengalami auto-pause (setelah 7 hari), sistem telah dilengkapi endpoint `/health` dan panduan pinger otomatis.
+
+Lihat panduan lengkap: [docs/KEEP_ALIVE.md](file:///home/kazu/Projects/my-projects/my-porto/docs/KEEP_ALIVE.md)
+
 ## License
 
 This project is open-source and available under the MIT License.
+

@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 from app.core.config import settings
+from app.db.session import get_db
 from app.routers import auth, projects, blog, contact, github, skills, experiences, admin, files, certificates, learning
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -28,3 +31,22 @@ app.include_router(files.router)
 @app.get("/")
 def root():
     return {"message": "API is running"}
+
+@app.get("/health", tags=["system"])
+def health_check(db: Session = Depends(get_db)):
+    """
+    Keep-alive and health check endpoint:
+    - Calling this endpoint resets Render's 15-minute inactivity timer.
+    - Executing SELECT 1 query resets Supabase's 7-day database inactivity pause.
+    """
+    try:
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database connection check failed: {str(e)}"
+        )

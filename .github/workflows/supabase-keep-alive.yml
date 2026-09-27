@@ -1,0 +1,32 @@
+name: Supabase & Render Backup Keep-Alive
+
+on:
+  schedule:
+    # Runs every 3 days at 00:00 UTC (consumes only ~10 minutes/month out of 2,000 free minutes)
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database directly
+        if: env.SUPABASE_URL != '' && env.SUPABASE_ANON_KEY != ''
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Pinging Supabase REST API to reset 7-day inactivity timer..."
+          curl -s -X GET "${SUPABASE_URL}/rest/v1/projects?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -o /dev/null -w "HTTP Status: %{http_code}\n" || true
+
+      - name: Ping Render Backend Health Endpoint
+        if: env.RENDER_BACKEND_URL != ''
+        env:
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+        run: |
+          echo "Pinging Render backend /health endpoint..."
+          curl -s "${RENDER_BACKEND_URL}/health" \
+            -o /dev/null -w "HTTP Status: %{http_code}\n" || true
