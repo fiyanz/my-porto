@@ -1,63 +1,103 @@
 import { getServerApiUrl } from '@/lib/api';
+import { getLocalCertificates, CertificateItem } from '@/lib/certificates';
+import CertificateCard from './CertificateCard';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-async function getCertificates() {
+async function getDbCertificates(): Promise<CertificateItem[]> {
   try {
-    const res = await fetch(`${getServerApiUrl()}/certificates/`, { next: { revalidate: 0 } });
+    const res = await fetch(`${getServerApiUrl()}/certificates/`, { cache: 'no-store' });
     if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
+  } catch {
+    return [];
+  }
+}
+
+async function getDriveCertificates(): Promise<any[]> {
+  try {
+    const res = await fetch(`${getServerApiUrl()}/certificates/drive-certs`, {
+      cache: 'no-store'
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
     return [];
   }
 }
 
 export default async function Certificates() {
-  const certificates = await getCertificates();
+  const [dbCerts, localCerts, driveCerts] = await Promise.all([
+    getDbCertificates(),
+    getLocalCertificates(),
+    getDriveCertificates(),
+  ]);
+
+  // Combine and deduplicate
+  const existingTitles = new Set([
+    ...driveCerts.map((c) => c.title?.toLowerCase().trim()),
+    ...localCerts.map((c) => c.title?.toLowerCase().trim()),
+  ]);
+
+  const filteredDbCerts = dbCerts.filter(
+    (c) => !existingTitles.has(c.title?.toLowerCase().trim())
+  );
+
+  const certificates = [...driveCerts, ...localCerts, ...filteredDbCerts];
 
   return (
     <>
-      <div className="flex items-end justify-between mb-5">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Certificates & Bootcamps</h1>
-          <p className="text-sm text-gray-500 mt-1">Formal achievements, courses, and certifications.</p>
+          <h1 className="text-3xl font-black tracking-tight">Certificates & Credentials</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Verified certifications, courses, and credentials auto-synced from Google Drive & storage.
+          </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
             <div className="text-xl font-black">{certificates.length}</div>
-            <div className="text-xs text-gray-500">Credentials</div>
+            <div className="text-xs text-gray-500 font-bold">Total Certificates</div>
           </div>
+          {driveCerts.length > 0 && (
+            <div className="border-2 border-black bg-gray-50 px-3 py-2 text-center flex flex-col justify-center">
+              <div className="text-xs font-mono font-bold text-gray-800 flex items-center gap-1 justify-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                {driveCerts.length} Drive Synced
+              </div>
+              <div className="text-[10px] text-gray-400">Google Drive</div>
+            </div>
+          )}
+          {localCerts.length > 0 && (
+            <div className="border-2 border-black bg-gray-50 px-3 py-2 text-center flex flex-col justify-center">
+              <div className="text-xs font-mono font-bold text-gray-800 flex items-center gap-1 justify-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                {localCerts.length} Folder
+              </div>
+              <div className="text-[10px] text-gray-400">local storage</div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {certificates.map((cert: any) => (
-          <div key={cert.id} className="border-2 border-black bg-white p-4 flex flex-col items-start gap-3 justify-between">
-            <div className="flex items-start gap-3 w-full">
-              <div className="w-10 h-10 bg-gray-200 border-2 border-black flex items-center justify-center shrink-0">
-                <i className={`fa-solid ${cert.icon || 'fa-certificate'} text-sm`}></i>
-              </div>
-              <div>
-                <div className="font-black text-sm leading-tight">{cert.title}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{cert.issuer}</div>
-                {cert.date && (
-                  <div className="text-xs font-mono text-gray-400 mt-1.5 border border-gray-200 px-2 py-0.5 inline-block">
-                    {cert.date}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {cert.credential_url && (
-              <a href={cert.credential_url} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs font-bold bg-gray-100 hover:bg-gray-200 border-2 border-black px-3 py-1.5 w-full text-center transition-colors">
-                View Credential <i className="fa-solid fa-arrow-up-right-from-square ml-1"></i>
-              </a>
-            )}
-          </div>
+        {certificates.map((cert) => (
+          <CertificateCard key={cert.id} cert={cert} />
         ))}
+
         {certificates.length === 0 && (
-          <div className="col-span-full p-4 border-2 border-dashed border-gray-400 text-center text-sm text-gray-500 bg-white">
-            No certificates added yet.
+          <div className="col-span-full p-8 border-2 border-dashed border-gray-400 text-center bg-white">
+            <div className="w-12 h-12 bg-gray-100 border-2 border-black flex items-center justify-center mx-auto mb-3">
+              <i className="fa-solid fa-certificate text-xl text-gray-400"></i>
+            </div>
+            <h3 className="font-black text-base mb-1">No Certificates Detected</h3>
+            <p className="text-xs text-gray-500 max-w-sm mx-auto mb-3">
+              Connect your Google Drive folder link in the Admin panel, or drop files into{' '}
+              <code className="font-mono bg-gray-100 px-1 border border-gray-300">
+                frontend/public/certificates/
+              </code>.
+            </p>
           </div>
         )}
       </div>

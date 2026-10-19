@@ -11,6 +11,7 @@ from app.models.contact import Contact
 from app.schemas.profile import ProfileResponse, ProfileUpdate
 from app.schemas.user import UserResponse
 from app.core.deps import get_current_active_superuser
+from app.services.telemetry import invalidate_telemetry_cache
 
 router = APIRouter()
 
@@ -40,6 +41,7 @@ def update_profile(
     db.add(profile)
     db.commit()
     db.refresh(profile)
+    invalidate_telemetry_cache()
     return profile
 
 @router.get("/admin/stats")

@@ -16,20 +16,26 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const API_URL = '/api';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
       const formData = new URLSearchParams();
       formData.append('username', email);
       formData.append('password', password);
 
-      const res = await fetch(`${API_URL}/auth/login/access-token`, {
+      const res = await fetch(`${baseUrl}/auth/login/access-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString(),
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Login failed');
+        let msg = `Login failed (${res.status})`;
+        try {
+          const data = await res.json();
+          msg = data.detail || msg;
+        } catch {
+          msg = `Server returned ${res.status} (${res.statusText || 'Endpoint not found or unreachable'})`;
+        }
+        throw new Error(msg);
       }
 
       const data = await res.json();

@@ -6,12 +6,32 @@ export default function AdminProjects() {
   const [projects, setProjects] = useState<any[]>([]);
   const [editing, setEditing] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', slug: '', category: '', status: 'Completed', description: '', technologies: '', domains: '', icon: 'fa-folder', outcome: '', github_url: '', challenge: '', learning: '' });
 
   const load = () => adminFetch('/projects/').then(r => r.json()).then(setProjects).catch(() => {});
   useEffect(() => { load(); }, []);
 
   const resetForm = () => { setForm({ title: '', slug: '', category: '', status: 'Completed', description: '', technologies: '', domains: '', icon: 'fa-folder', outcome: '', github_url: '', challenge: '', learning: '' }); setEditing(null); setShowForm(false); };
+
+  const handleSyncGithub = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await adminFetch('/projects/sync-github', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Sync failed');
+      setSyncResult(`✓ Synced ${data.total_repos} repos (${data.created_count} new imported, ${data.updated_count} updated)`);
+      load();
+      setTimeout(() => setSyncResult(null), 6000);
+    } catch (err: any) {
+      setSyncResult(`✗ Sync error: ${err.message}`);
+      setTimeout(() => setSyncResult(null), 6000);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
@@ -39,10 +59,26 @@ export default function AdminProjects() {
           <h1 className="text-3xl font-black tracking-tight">Manage Projects</h1>
           <p className="text-sm text-gray-500 mt-1">{projects.length} projects in your portfolio.</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 text-sm font-bold border-2 border-black hover:bg-gray-700">
-          <i className="fa-solid fa-plus text-xs"></i> Add Project
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncGithub}
+            disabled={syncing}
+            className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 text-sm font-bold border-2 border-black hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            <i className={`fa-brands fa-github ${syncing ? 'animate-spin' : ''}`}></i>
+            {syncing ? 'Syncing...' : 'Sync from GitHub'}
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 text-sm font-bold border-2 border-black hover:bg-gray-700">
+            <i className="fa-solid fa-plus text-xs"></i> Add Project
+          </button>
+        </div>
       </div>
+
+      {syncResult && (
+        <div className={`border-2 border-black p-3 mb-5 text-xs font-bold ${syncResult.startsWith('✓') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+          {syncResult}
+        </div>
+      )}
 
       {showForm && (
         <div className="border-2 border-black bg-white p-5 mb-5">

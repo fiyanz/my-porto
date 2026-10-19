@@ -28,6 +28,18 @@ def create_skill(skill_in: SkillCreate, db: Session = Depends(get_db)):
     db.refresh(skill)
     return skill
 
+@router.post("/batch", response_model=List[SkillResponse])
+def create_skills_batch(skills_in: List[SkillCreate], db: Session = Depends(get_db)):
+    created = []
+    for s_in in skills_in:
+        skill = Skill(**s_in.model_dump())
+        db.add(skill)
+        created.append(skill)
+    db.commit()
+    for s in created:
+        db.refresh(s)
+    return created
+
 @router.put("/{skill_id}", response_model=SkillResponse)
 def update_skill(skill_id: int, skill_in: SkillUpdate, db: Session = Depends(get_db)):
     skill = db.query(Skill).filter(Skill.id == skill_id).first()

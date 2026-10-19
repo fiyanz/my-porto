@@ -5,11 +5,13 @@ import { adminFetch } from '@/lib/admin';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
 
   useEffect(() => {
-    adminFetch('/admin/stats').then(r => r.json()).then(setStats).catch(() => {});
-    adminFetch('/contact/').then(r => r.json()).then(d => setMessages(d.slice(0, 5))).catch(() => {});
+    adminFetch('/admin/stats').then(r => r.ok ? r.json() : null).then(data => data && setStats(data)).catch(() => {});
+    adminFetch('/analytics/summary').then(r => r.ok ? r.json() : null).then(data => data && setAnalytics(data)).catch(() => {});
+    adminFetch('/contact/').then(r => r.ok ? r.json() : null).then(d => d && setMessages(d.slice(0, 5))).catch(() => {});
   }, []);
 
   return (
@@ -20,8 +22,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {[
+          { label: 'Total Views', value: analytics?.total_views ?? '—', icon: 'fa-chart-line', href: '/admin/analytics' },
           { label: 'Projects', value: stats?.projects_count ?? '—', icon: 'fa-folder-open', href: '/admin/projects' },
           { label: 'Skills', value: stats?.skills_count ?? '—', icon: 'fa-code', href: '/admin/skills' },
           { label: 'Experiences', value: stats?.experiences_count ?? '—', icon: 'fa-briefcase', href: '/admin/experiences' },

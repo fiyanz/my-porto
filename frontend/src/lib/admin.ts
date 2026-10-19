@@ -27,7 +27,7 @@ export async function adminFetch(endpoint: string, options: RequestInit = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
   const url = `${baseUrl}${endpoint}`;
 
   const response = await fetch(url, {

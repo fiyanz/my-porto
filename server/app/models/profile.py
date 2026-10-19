@@ -17,4 +17,7 @@ class Profile(Base):
     location = Column(String, nullable=True, default="Bandung, Indonesia")
     status = Column(String, nullable=True, default="Available for Internship")
     cv_url = Column(String, nullable=True)
+    weekly_hours_fallback = Column(String, nullable=True, default="38.5 hrs")
+    daily_driver = Column(String, nullable=True, default="Neovim + Hyprland")
+    coding_status = Column(String, nullable=True, default="Active Coding")
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

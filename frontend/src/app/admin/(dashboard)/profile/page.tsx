@@ -5,10 +5,13 @@ import AvatarUploadModal from '@/components/AvatarUploadModal';
 
 export default function AdminProfile() {
   const [profile, setProfile] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', title: '', bio: '', avatar_url: '', github_url: '', linkedin_url: '', instagram_url: '', email: '', location: '', status: '', cv_url: '' });
+  const [form, setForm] = useState({
+    name: '', title: '', bio: '', avatar_url: '', github_url: '', linkedin_url: '', instagram_url: '', email: '', location: '', status: '', cv_url: '',
+    weekly_hours_fallback: '38.5 hrs', daily_driver: 'Neovim + Hyprland', coding_status: 'Active Coding'
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  
+
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -19,7 +22,22 @@ export default function AdminProfile() {
   useEffect(() => {
     adminFetch('/admin/profile').then(r => r.json()).then(p => {
       setProfile(p);
-      setForm({ name: p.name || '', title: p.title || '', bio: p.bio || '', avatar_url: p.avatar_url || '', github_url: p.github_url || '', linkedin_url: p.linkedin_url || '', instagram_url: p.instagram_url || '', email: p.email || '', location: p.location || '', status: p.status || '', cv_url: p.cv_url || '' });
+      setForm({
+        name: p.name || '',
+        title: p.title || '',
+        bio: p.bio || '',
+        avatar_url: p.avatar_url || '',
+        github_url: p.github_url || '',
+        linkedin_url: p.linkedin_url || '',
+        instagram_url: p.instagram_url || '',
+        email: p.email || '',
+        location: p.location || '',
+        status: p.status || '',
+        cv_url: p.cv_url || '',
+        weekly_hours_fallback: p.weekly_hours_fallback || '38.5 hrs',
+        daily_driver: p.daily_driver || 'Neovim + Hyprland',
+        coding_status: p.coding_status || 'Active Coding'
+      });
     }).catch(() => {});
   }, []);
 
@@ -140,6 +158,31 @@ export default function AdminProfile() {
               </div>
               <div><label className="text-xs font-bold text-gray-600 block mb-1">Status</label><input value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full border-2 border-black bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="Available for Internship" /></div>
             </div>
+
+            {/* Developer Telemetry & HUD Settings */}
+            <div className="border-t border-gray-200 pt-3 mb-4">
+              <h4 className="text-xs font-black uppercase tracking-wider text-gray-500 mb-2 flex items-center gap-1.5">
+                <i className="fa-solid fa-bolt text-gray-700"></i> Developer Telemetry & HUD (Homepage)
+              </h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 block mb-1">Weekly Hours Fallback</label>
+                  <input value={form.weekly_hours_fallback} onChange={e => setForm({ ...form, weekly_hours_fallback: e.target.value })} className="w-full border-2 border-black bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="38.5 hrs" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 block mb-1">Daily Driver / Editor</label>
+                  <input value={form.daily_driver} onChange={e => setForm({ ...form, daily_driver: e.target.value })} className="w-full border-2 border-black bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="Neovim + Hyprland" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 block mb-1">Session Status</label>
+                  <input value={form.coding_status} onChange={e => setForm({ ...form, coding_status: e.target.value })} className="w-full border-2 border-black bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="Active Coding" />
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                Note: If WAKATIME_API_KEY is configured, weekly hours & languages will auto-sync live from WakaTime.
+              </p>
+            </div>
+
             <div className="flex items-center gap-3">
               <button onClick={handleSave} disabled={saving} className="bg-gray-900 text-white px-5 py-2.5 text-sm font-bold border-2 border-black hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2">
                 {saving ? <><span className="mono text-gray-400 text-xs">$</span> saving…</> : saved ? <><i className="fa-solid fa-check text-xs"></i> Saved!</> : <><span className="mono text-gray-400 text-xs">$</span> save changes</>}

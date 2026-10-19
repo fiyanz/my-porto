@@ -1,13 +1,25 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.db.session import get_db
 from app.schemas.project import ProjectResponse, ProjectCreate, ProjectUpdate
 from app.services import project_service
-# Will add auth dependency for protected routes later
+from app.services.github import sync_github_repositories
+from app.core.deps import get_current_active_superuser
+from app.models.user import User
 
 router = APIRouter()
+
+@router.post("/sync-github")
+async def sync_projects_from_github(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    try:
+        return await sync_github_repositories(db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/", response_model=List[ProjectResponse])
 def read_projects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):

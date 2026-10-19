@@ -7,8 +7,23 @@ export default function KittyTerminal() {
   const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+
   const dragRef = useRef<{ ox: number; oy: number } | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(p => { if (p) setProfile(p); })
+      .catch(() => {});
+
+    fetch('/api/projects/')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setProjects(data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isOpen && lines.length === 0) {
@@ -24,7 +39,6 @@ export default function KittyTerminal() {
 
   const openKitty = () => setIsOpen(true);
   const closeKitty = () => setIsOpen(false);
-
   const resetTerm = () => setLines([]);
 
   const appendRaw = (node: React.ReactNode) => {
@@ -38,41 +52,47 @@ export default function KittyTerminal() {
         <div key={Date.now()} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', margin: '8px 0' }}>
           <pre className="term-ascii">{'    /\\_/\\\n  ( o.o )\n   > ^ <'}</pre>
           <div>
-            <div className="term-line"><span className="term-label">OS:       </span><span className="term-value">Hyprland / Arch Linux (Daily Driver)</span></div>
-            <div className="term-line"><span className="term-label">Host:     </span><span className="term-value">Bagus Alfiyan Yusuf (6th Sem CS)</span></div>
+            <div className="term-line"><span className="term-label">OS:       </span><span className="term-value">Hyprland / Arch Linux</span></div>
+            <div className="term-line"><span className="term-label">Host:     </span><span className="term-value">{profile?.name || 'Bagus Alfiyan'}</span></div>
             <div className="term-line"><span className="term-label">Kernel:   </span><span className="term-value">ML / Backend / IoT Systems</span></div>
-            <div className="term-line"><span className="term-label">Uptime:   </span><span className="term-value">3+ Years Active Coding</span></div>
-            <div className="term-line"><span className="term-label">Packages: </span><span className="term-value">TensorFlow, FastAPI, ESP32, Docker</span></div>
             <div className="term-line"><span className="term-label">Shell:    </span><span className="term-value">Kitty / Zsh + JetBrains Mono</span></div>
-            <div className="term-line"><span className="term-label">Memory:   </span><span className="term-value">Deep Debugging First, Execute Second</span></div>
+            <div className="term-line"><span className="term-label">Projects: </span><span className="term-value">{projects.length} Synced Repositories</span></div>
+            <div className="term-line"><span className="term-label">Bio:      </span><span className="term-value">{profile?.bio || 'Building at the intersection of ML, Backend & Systems.'}</span></div>
           </div>
         </div>
       );
     } else if (c === 'projects') {
       appendRaw(
         <div key={Date.now()} style={{ margin: '8px 0' }}>
-          <div className="term-line" style={{ color: '#bb9af7', fontWeight: 700 }}>── Featured Projects ──</div>
-          <div className="term-line"><span className="term-label">[ML]  </span><span className="term-value">red-chili-pepper-pests-model</span>   TensorFlow · MLflow · Docker</div>
-          <div className="term-line"><span className="term-label">[BE]  </span><span className="term-value">fastapi-ecommerce-system</span>       FastAPI · PostgreSQL · Redis</div>
-          <div className="term-line"><span className="term-label">[IoT] </span><span className="term-value">SightAssist-ESP32-C3</span>           MicroPython · MQTT · CV</div>
-          <div className="term-line" style={{ color: '#565f89', marginTop: '4px' }}>→ type 'open &lt;name&gt;' to deep-dive into a project</div>
+          <div className="term-line" style={{ color: '#bb9af7', fontWeight: 700 }}>── Portfolio Projects ({projects.length}) ──</div>
+          {projects.length > 0 ? (
+            projects.slice(0, 5).map((p: any, idx: number) => (
+              <div key={idx} className="term-line">
+                <span className="term-label">[{p.category || 'Code'}] </span>
+                <span className="term-value">{p.slug || p.title}</span> — {(p.technologies || []).slice(0, 3).join(' · ')}
+              </div>
+            ))
+          ) : (
+            <div className="term-line" style={{ color: '#565f89' }}>No projects registered yet. Sync via Admin to display repos.</div>
+          )}
+          <div className="term-line" style={{ color: '#565f89', marginTop: '4px' }}>→ visit /projects for complete catalog</div>
         </div>
       );
     } else if (c === 'contact') {
       appendRaw(
         <div key={Date.now()} style={{ margin: '8px 0' }}>
           <div className="term-line" style={{ color: '#bb9af7', fontWeight: 700 }}>── Contact Info ──</div>
-          <div className="term-line"><span className="term-label">GitHub:   </span><span className="term-value">github.com/bagusalfiyan</span></div>
-          <div className="term-line"><span className="term-label">LinkedIn: </span><span className="term-value">linkedin.com/in/bagusalfiyan</span></div>
-          <div className="term-line"><span className="term-label">Email:    </span><span className="term-value">bagus@example.com</span></div>
+          <div className="term-line"><span className="term-label">GitHub:   </span><span className="term-value">{profile?.github_url || 'https://github.com/Fiyanz'}</span></div>
+          <div className="term-line"><span className="term-label">LinkedIn: </span><span className="term-value">{profile?.linkedin_url || 'Not set'}</span></div>
+          <div className="term-line"><span className="term-label">Email:    </span><span className="term-value">{profile?.email || 'bagusalfiyanyusuf@gmail.com'}</span></div>
         </div>
       );
     } else if (c === 'sudo hire' || c === 'hire') {
       appendRaw(
         <div key={Date.now()} style={{ margin: '8px 0' }}>
-          <div className="term-line" style={{ color: '#9ece6a', fontWeight: 700 }}>[sudo] password for bagus: ••••••••</div>
-          <div className="term-line" style={{ color: '#9ece6a' }}>✓ Access granted. Initiating hire sequence…</div>
-          <div className="term-line" style={{ color: '#e0af68', marginTop: '6px' }}>📄 CV downloaded successfully → bagus_cv_2026.pdf</div>
+          <div className="term-line" style={{ color: '#9ece6a', fontWeight: 700 }}>[sudo] initiating contact & CV dispatch…</div>
+          <div className="term-line" style={{ color: '#9ece6a' }}>✓ Profile: {profile?.name || 'Bagus Alfiyan'}</div>
+          <div className="term-line" style={{ color: '#e0af68', marginTop: '6px' }}>📄 CV URL: {profile?.cv_url || '/api/files/cv'}</div>
         </div>
       );
     } else if (c === 'clear') {
@@ -82,15 +102,16 @@ export default function KittyTerminal() {
         <div key={Date.now()} style={{ margin: '8px 0' }}>
           <div className="term-line" style={{ color: '#bb9af7', fontWeight: 700 }}>── Available Commands ──</div>
           <div className="term-line"><span className="term-label">neofetch   </span>Show system info & bio</div>
-          <div className="term-line"><span className="term-label">projects   </span>List featured projects</div>
-          <div className="term-line"><span className="term-label">contact    </span>Show contact info</div>
+          <div className="term-line"><span className="term-label">projects   </span>List registered portfolio projects</div>
+          <div className="term-line"><span className="term-label">contact    </span>Show authentic contact links</div>
+          <div className="term-line"><span className="term-label">hire       </span>Display CV link & details</div>
           <div className="term-line"><span className="term-label">clear      </span>Clear terminal</div>
         </div>
       );
     } else {
       appendRaw(
         <div key={Date.now()} className="term-line" style={{ color: '#f7768e' }}>
-          bash: {cmd}: command not found — try 'help'
+          bash: {cmd}: command not found — try &apos;help&apos;
         </div>
       );
     }
@@ -181,7 +202,7 @@ export default function KittyTerminal() {
                 💡 Tip: Type <a onClick={() => runCmd('neofetch')}>neofetch</a>,{' '}
                 <a onClick={() => runCmd('projects')}>projects</a>,{' '}
                 <a onClick={() => runCmd('contact')}>contact</a>, or{' '}
-                <a onClick={() => runCmd('sudo hire')}>sudo hire</a> below!
+                <a onClick={() => runCmd('hire')}>hire</a> below!
               </div>
 
               <div id="term-output">

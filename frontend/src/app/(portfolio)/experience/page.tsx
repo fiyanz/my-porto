@@ -1,37 +1,62 @@
 import { getServerApiUrl } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
+
 async function getExperiences() {
   try {
     const res = await fetch(`${getServerApiUrl()}/experiences/`, { next: { revalidate: 0 } });
     if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
+  } catch {
     return [];
   }
 }
 
+async function getGithubStats() {
+  try {
+    const res = await fetch(`${getServerApiUrl()}/github/stats`, {
+      next: { revalidate: 3600 }
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export default async function Experience() {
-  const experiences = await getExperiences();
+  const [experiences, statsData] = await Promise.all([
+    getExperiences(),
+    getGithubStats()
+  ]);
+
+  const stats = statsData || {
+    public_repos: 0,
+    total_stars: 0,
+    followers: 0,
+    prs_merged: 0
+  };
+
+  const orgs = Array.from(new Set(experiences.map((e: any) => e.institution).filter(Boolean)));
 
   return (
     <>
       <div className="flex items-end justify-between mb-5">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Experience</h1>
-          <p className="text-sm text-gray-500 mt-1">Education, bootcamps, org involvement & open source contributions.</p>
+          <p className="text-sm text-gray-500 mt-1">Education, bootcamps, org involvement & open source activity.</p>
         </div>
         <div className="flex gap-3">
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
-            <div className="text-xl font-black">3+</div>
-            <div className="text-xs text-gray-500">Yrs Active</div>
+            <div className="text-xl font-black">{experiences.length}</div>
+            <div className="text-xs text-gray-500">Milestones</div>
           </div>
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
-            <div className="text-xl font-black">4</div>
-            <div className="text-xs text-gray-500">Orgs</div>
+            <div className="text-xl font-black">{orgs.length}</div>
+            <div className="text-xs text-gray-500">Institutions</div>
           </div>
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
-            <div className="text-xl font-black">48</div>
+            <div className="text-xl font-black">{stats.prs_merged}</div>
             <div className="text-xs text-gray-500">PRs Merged</div>
           </div>
         </div>
@@ -49,11 +74,11 @@ export default async function Experience() {
             {experiences.length > 0 ? experiences.map((exp: any, index: number) => {
               const isLast = index === experiences.length - 1;
               const isCurrent = exp.status === 'Current' || exp.status === 'Ongoing';
-              
+
               return (
                 <div key={exp.id} className={`flex gap-4 relative z-10 ${!isLast ? 'pb-6' : ''}`}>
-                  <div className={`w-10 h-10 ${exp.icon_bg} border-2 border-black flex items-center justify-center shrink-0 z-10`}>
-                    <i className={`fa-solid ${exp.icon} ${exp.icon_bg.includes('white') ? 'text-gray-900' : 'text-white'} text-sm`}></i>
+                  <div className={`w-10 h-10 ${exp.icon_bg || 'bg-gray-900'} border-2 border-black flex items-center justify-center shrink-0 z-10`}>
+                    <i className={`fa-solid ${exp.icon || 'fa-briefcase'} ${exp.icon_bg?.includes('white') ? 'text-gray-900' : 'text-white'} text-sm`}></i>
                   </div>
                   <div className="flex-1 border-2 border-black bg-white p-4">
                     <div className="flex items-start justify-between mb-2">
@@ -68,11 +93,11 @@ export default async function Experience() {
                         <span className="text-xs text-gray-400 mono">{exp.time_range}</span>
                       </div>
                     </div>
-                    
+
                     <p className="text-xs text-gray-600 leading-relaxed mb-3">
                       {exp.description}
                     </p>
-                    
+
                     {exp.outcome && (
                       <div className="border-2 border-black p-2 bg-gray-50 flex items-center gap-2 mb-3">
                         <i className="fa-solid fa-trophy text-xs text-gray-600"></i>
@@ -80,7 +105,7 @@ export default async function Experience() {
                         <span className="text-xs text-gray-600">{exp.outcome}</span>
                       </div>
                     )}
-                    
+
                     {exp.tags && exp.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {exp.tags.map((tag: string, i: number) => (
@@ -104,49 +129,33 @@ export default async function Experience() {
         {/* RIGHT: Stats sidebar */}
         <div className="flex flex-col gap-4">
           <div id="involvement-card" className="border-2 border-black bg-white p-4">
-            <h3 className="font-black text-sm mb-3 border-b-2 border-black pb-2">Org Involvement</h3>
+            <h3 className="font-black text-sm mb-3 border-b-2 border-black pb-2">Org & Institutions</h3>
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gray-200 border-2 border-black flex items-center justify-center shrink-0">
-                  <i className="fa-brands fa-github text-sm"></i>
+              {orgs.length > 0 ? (
+                orgs.map((org, idx) => {
+                  const match = experiences.find((e: any) => e.institution === org);
+                  return (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-200 border-2 border-black flex items-center justify-center shrink-0">
+                        <i className={`fa-solid ${match?.icon || 'fa-building-columns'} text-sm`}></i>
+                      </div>
+                      <div className="overflow-hidden">
+                        <div className="text-xs font-black truncate">{org}</div>
+                        <div className="text-xs text-gray-400 truncate">{match?.title || 'Contributor'}</div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-xs text-gray-500 italic p-2 border-2 border-dashed border-gray-300 text-center">
+                  No institutions recorded.
                 </div>
-                <div>
-                  <div className="text-xs font-black">GitHub Campus</div>
-                  <div className="text-xs text-gray-400">Student Developer</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gray-200 border-2 border-black flex items-center justify-center shrink-0">
-                  <i className="fa-solid fa-microchip text-sm"></i>
-                </div>
-                <div>
-                  <div className="text-xs font-black">IoT Club — Univ</div>
-                  <div className="text-xs text-gray-400">Active Member</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gray-200 border-2 border-black flex items-center justify-center shrink-0">
-                  <i className="fa-solid fa-brain text-sm"></i>
-                </div>
-                <div>
-                  <div className="text-xs font-black">ML Study Group</div>
-                  <div className="text-xs text-gray-400">Co-organizer</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gray-200 border-2 border-black flex items-center justify-center shrink-0">
-                  <i className="fa-brands fa-linux text-sm"></i>
-                </div>
-                <div>
-                  <div className="text-xs font-black">Linux / Ricing</div>
-                  <div className="text-xs text-gray-400">Hyprland community</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
           <div id="philosophy-card" className="border-2 border-black bg-white p-4">
-            <h3 className="font-black text-sm mb-3 border-b-2 border-black pb-2">Work Philosophy</h3>
+            <h3 className="font-black text-sm mb-3 border-b-2 border-black pb-2">Engineering Philosophy</h3>
             <div className="flex flex-col gap-3">
               <div className="border-l-4 border-black pl-3">
                 <p className="text-xs text-gray-700 italic leading-relaxed">"Deeply understand before execute — not just make it work, but know why it works."</p>
@@ -161,28 +170,35 @@ export default async function Experience() {
           </div>
 
           <div id="badge-card" className="border-2 border-black bg-white p-4">
-            <h3 className="font-black text-sm mb-3 border-b-2 border-black pb-2">GitHub Badges</h3>
+            <h3 className="font-black text-sm mb-3 border-b-2 border-black pb-2">GitHub Live Metrics</h3>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 border-2 border-black p-2 bg-gray-50">
-                <i className="fa-solid fa-code-pull-request text-sm text-gray-700"></i>
-                <div>
-                  <div className="text-xs font-black">Pull Shark</div>
-                  <div className="text-xs text-gray-400">×2 unlocked</div>
+              <div className="flex items-center justify-between border-2 border-black p-2 bg-gray-50 text-xs">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-box-archive text-gray-700"></i>
+                  <span className="font-bold">Public Repos</span>
                 </div>
+                <span className="font-black mono">{stats.public_repos}</span>
               </div>
-              <div className="flex items-center gap-2 border-2 border-black p-2 bg-gray-50">
-                <i className="fa-solid fa-snowflake text-sm text-gray-700"></i>
-                <div>
-                  <div className="text-xs font-black">Arctic Code Vault</div>
-                  <div className="text-xs text-gray-400">Contributor</div>
+              <div className="flex items-center justify-between border-2 border-black p-2 bg-gray-50 text-xs">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-star text-gray-700"></i>
+                  <span className="font-bold">Total Stars</span>
                 </div>
+                <span className="font-black mono">{stats.total_stars} ★</span>
               </div>
-              <div className="flex items-center gap-2 border-2 border-black p-2 bg-gray-50">
-                <i className="fa-solid fa-fire text-sm text-gray-700"></i>
-                <div>
-                  <div className="text-xs font-black">Streak</div>
-                  <div className="text-xs text-gray-400">127 days active</div>
+              <div className="flex items-center justify-between border-2 border-black p-2 bg-gray-50 text-xs">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-code-pull-request text-gray-700"></i>
+                  <span className="font-bold">Merged PRs</span>
                 </div>
+                <span className="font-black mono">{stats.prs_merged}</span>
+              </div>
+              <div className="flex items-center justify-between border-2 border-black p-2 bg-gray-50 text-xs">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-users text-gray-700"></i>
+                  <span className="font-bold">Followers</span>
+                </div>
+                <span className="font-black mono">{stats.followers}</span>
               </div>
             </div>
           </div>

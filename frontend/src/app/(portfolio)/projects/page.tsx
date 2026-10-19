@@ -2,10 +2,11 @@ import ProjectList from './ProjectList';
 import { getServerApiUrl } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
+
 async function getProjects() {
   try {
-    const res = await fetch(`${getServerApiUrl()}/projects/`, { 
-      next: { revalidate: 0 } // no cache for now, so we see DB changes immediately
+    const res = await fetch(`${getServerApiUrl()}/projects/`, {
+      next: { revalidate: 0 }
     });
     if (!res.ok) {
       return [];
@@ -15,13 +16,22 @@ async function getProjects() {
       ...p,
       tags: p.technologies || []
     }));
-  } catch (err) {
+  } catch {
     return [];
   }
 }
 
-export default async function Projects() {
-  const projects = await getProjects();
+export default async function Projects({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const [projects, params] = await Promise.all([
+    getProjects(),
+    searchParams
+  ]);
+
+  const query = params?.q || '';
 
   return (
     <>
@@ -29,7 +39,7 @@ export default async function Projects() {
       <div id="page-header" className="flex items-end justify-between mb-5">
         <div>
           <h1 className="text-3xl font-black tracking-tight">All Projects</h1>
-          <p className="text-sm text-gray-500 mt-1">Everything I've built — from models to microcontrollers.</p>
+          <p className="text-sm text-gray-500 mt-1">Everything built and synced from GitHub repositories.</p>
         </div>
         {/* Summary stat pills */}
         <div className="flex gap-3">
@@ -39,7 +49,7 @@ export default async function Projects() {
           </div>
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
             <div className="text-xl font-black">
-              {new Set(projects.flatMap((p: any) => p.domains)).size}
+              {new Set(projects.flatMap((p: any) => p.domains || [])).size}
             </div>
             <div className="text-xs text-gray-500">Domains</div>
           </div>
@@ -52,7 +62,7 @@ export default async function Projects() {
         </div>
       </div>
 
-      <ProjectList initialProjects={projects} />
+      <ProjectList initialProjects={projects} initialQuery={query} />
     </>
   );
 }

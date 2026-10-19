@@ -2,12 +2,13 @@ import React from 'react';
 import { getServerApiUrl } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
+
 async function getSkills() {
   try {
     const res = await fetch(`${getServerApiUrl()}/skills/`, { next: { revalidate: 0 } });
     if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -17,7 +18,7 @@ async function getLearning() {
     const res = await fetch(`${getServerApiUrl()}/learning/`, { next: { revalidate: 0 } });
     if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -28,56 +29,59 @@ export default async function Skills() {
     getLearning()
   ]);
 
-  // Group skills by category
   const categories = [
-    { name: 'Languages', icon: 'fa-terminal', fallbackMostUsed: 'Python · Go' },
-    { name: 'ML / Data', icon: 'fa-brain', fallbackMostUsed: 'TensorFlow · sklearn' },
-    { name: 'Backend / Infra', icon: 'fa-server', fallbackMostUsed: 'FastAPI · Docker' },
-    { name: 'IoT / Embedded', icon: 'fa-microchip', fallbackMostUsed: 'ESP32 · MQTT' },
-    { name: 'Mobile / Web3', icon: 'fa-mobile-screen', fallbackMostUsed: 'Flutter · Hardhat' },
-    { name: 'Tooling / OS', icon: 'fa-screwdriver-wrench', fallbackMostUsed: 'Arch + Hyprland' }
+    { name: 'Languages', icon: 'fa-terminal' },
+    { name: 'ML / Data', icon: 'fa-brain' },
+    { name: 'Backend / Infra', icon: 'fa-server' },
+    { name: 'IoT / Embedded', icon: 'fa-microchip' },
+    { name: 'Mobile / Web3', icon: 'fa-mobile-screen' },
+    { name: 'Tooling / OS', icon: 'fa-screwdriver-wrench' }
   ];
 
   const groupedSkills = categories.map(cat => ({
     ...cat,
-    skills: skills.filter((s: any) => s.category === cat.name).sort((a: any, b: any) => a.display_order - b.display_order)
+    skills: skills
+      .filter((s: any) => s.category === cat.name)
+      .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
   }));
 
-  // Compute Domain Proficiency
+  // Compute Domain Proficiency exclusively from database skills
   const getProficiency = (categoryName: string) => {
     const categorySkills = groupedSkills.find(c => c.name === categoryName)?.skills || [];
     if (categorySkills.length === 0) return 0;
-    const totalLevel = categorySkills.reduce((sum: number, skill: any) => sum + skill.level, 0);
+    const totalLevel = categorySkills.reduce((sum: number, skill: any) => sum + (skill.level || 0), 0);
     return Math.round(totalLevel / categorySkills.length);
   };
 
   const domainProficiencies = [
-    { name: 'Machine Learning / AI', icon: 'fa-brain', level: getProficiency('ML / Data') || 82 },
-    { name: 'Backend / API', icon: 'fa-server', level: getProficiency('Backend / Infra') || 88 },
-    { name: 'IoT / Embedded', icon: 'fa-microchip', level: getProficiency('IoT / Embedded') || 70 },
-    { name: 'Mobile (Flutter)', icon: 'fa-mobile-screen', level: getProficiency('Mobile / Web3') || 65 },
-    { name: 'Web3 / Smart Contracts', icon: 'fa-cube', level: 58 } // Keeping static for now, or use Mobile / Web3
-  ];
+    { name: 'Machine Learning / AI', icon: 'fa-brain', level: getProficiency('ML / Data') },
+    { name: 'Backend / API', icon: 'fa-server', level: getProficiency('Backend / Infra') },
+    { name: 'IoT / Embedded', icon: 'fa-microchip', level: getProficiency('IoT / Embedded') },
+    { name: 'Mobile & Web3', icon: 'fa-mobile-screen', level: getProficiency('Mobile / Web3') },
+    { name: 'Languages & Core', icon: 'fa-terminal', level: getProficiency('Languages') },
+  ].filter(d => d.level > 0 || skills.length === 0);
+
+  const totalCategories = new Set(skills.map((s: any) => s.category).filter(Boolean)).size;
 
   return (
     <>
       <div className="flex items-end justify-between mb-5">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Skills & Stack</h1>
-          <p className="text-sm text-gray-500 mt-1">Tools, languages, and frameworks I use daily or have shipped with.</p>
+          <p className="text-sm text-gray-500 mt-1">Tools, languages, and frameworks registered in portfolio database.</p>
         </div>
         <div className="flex gap-3">
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
-            <div className="text-xl font-black">{skills.length > 0 ? skills.length : '28+'}</div>
+            <div className="text-xl font-black">{skills.length}</div>
             <div className="text-xs text-gray-500">Technologies</div>
           </div>
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
-            <div className="text-xl font-black">5</div>
-            <div className="text-xs text-gray-500">Domains</div>
+            <div className="text-xl font-black">{totalCategories}</div>
+            <div className="text-xs text-gray-500">Categories</div>
           </div>
           <div className="border-2 border-black bg-white px-4 py-2 text-center">
-            <div className="text-xl font-black">3+</div>
-            <div className="text-xs text-gray-500">Yrs Coding</div>
+            <div className="text-xl font-black">{learningItems.length}</div>
+            <div className="text-xs text-gray-500">In Progress</div>
           </div>
         </div>
       </div>
@@ -86,23 +90,29 @@ export default async function Skills() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
         <div id="proficiency-card" className="col-span-2 border-2 border-black bg-white p-5">
           <h3 className="font-black text-sm mb-4 flex items-center gap-2">
-            <i className="fa-solid fa-chart-bar text-gray-500"></i> Domain Proficiency
+            <i className="fa-solid fa-chart-bar text-gray-500"></i> Domain Proficiency (Average by Stack)
           </h3>
           <div className="flex flex-col gap-4">
-            {domainProficiencies.map((domain) => (
-              <div key={domain.name}>
-                <div className="flex justify-between items-center mb-1">
-                  <div className="flex items-center gap-2">
-                    <i className={`fa-solid ${domain.icon} text-sm text-gray-600`}></i>
-                    <span className="text-sm font-bold">{domain.name}</span>
+            {domainProficiencies.length > 0 ? (
+              domainProficiencies.map((domain) => (
+                <div key={domain.name}>
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="flex items-center gap-2">
+                      <i className={`fa-solid ${domain.icon} text-sm text-gray-600`}></i>
+                      <span className="text-sm font-bold">{domain.name}</span>
+                    </div>
+                    <span className="text-xs font-black mono">{domain.level}%</span>
                   </div>
-                  <span className="text-xs font-black mono">{domain.level}%</span>
+                  <div className="w-full h-3 bg-gray-200 border border-gray-300">
+                    <div className="h-full bg-gray-800 transition-all duration-500" style={{ width: `${domain.level}%` }}></div>
+                  </div>
                 </div>
-                <div className="w-full h-3 bg-gray-200 border border-gray-300">
-                  <div className="h-full bg-gray-800 transition-all duration-500" style={{ width: `${domain.level}%` }}></div>
-                </div>
+              ))
+            ) : (
+              <div className="text-xs text-gray-500 italic p-3 border-2 border-dashed border-gray-300 text-center">
+                No skill proficiencies recorded yet.
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -132,9 +142,12 @@ export default async function Skills() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
         {groupedSkills.map((category) => {
           const primarySkills = category.skills.filter((s: any) => s.is_primary);
-          const mostUsedText = primarySkills.length > 0 
+          const topSkills = category.skills.slice(0, 2);
+          const mostUsedText = primarySkills.length > 0
             ? primarySkills.map((s: any) => s.name).join(' · ')
-            : category.fallbackMostUsed;
+            : topSkills.length > 0
+            ? topSkills.map((s: any) => s.name).join(' · ')
+            : '—';
 
           return (
             <div key={category.name} className="border-2 border-black bg-white p-4">
@@ -146,8 +159,8 @@ export default async function Skills() {
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {category.skills.length > 0 ? category.skills.map((skill: any) => (
-                  <span 
-                    key={skill.id} 
+                  <span
+                    key={skill.id}
                     className={`border-2 border-black px-2 py-1 text-xs font-bold mono ${
                       skill.is_primary ? 'bg-gray-900 text-white font-black' : 'bg-gray-100'
                     }`}
@@ -166,7 +179,6 @@ export default async function Skills() {
           );
         })}
       </div>
-
     </>
   );
 }

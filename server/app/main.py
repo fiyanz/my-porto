@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.core.config import settings
 from app.db.session import get_db
-from app.routers import auth, projects, blog, contact, github, skills, experiences, admin, files, certificates, learning
+from app.routers import auth, projects, blog, contact, github, skills, experiences, admin, files, certificates, learning, analytics, telemetry
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -25,6 +25,8 @@ app.include_router(skills.router, prefix="/skills", tags=["skills"])
 app.include_router(experiences.router, prefix="/experiences", tags=["experiences"])
 app.include_router(certificates.router, prefix="/certificates", tags=["certificates"])
 app.include_router(learning.router, prefix="/learning", tags=["learning"])
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+app.include_router(telemetry.router, prefix="/telemetry", tags=["telemetry"])
 app.include_router(admin.router, tags=["admin"])
 app.include_router(files.router)
 
