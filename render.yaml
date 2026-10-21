@@ -1,13 +1,12 @@
 services:
   # ------------------------------------
-  # 1. Backend (FastAPI)
+  # 1. Backend (FastAPI - Docker)
   # ------------------------------------
   - type: web
-    name: portofolio-backend
-    env: python
-    rootDir: ./server
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
+    name: my-porto-bta9
+    env: docker
+    dockerContext: ./server
+    dockerfilePath: ./server/Dockerfile
     plan: free # Use free tier
     healthCheckPath: /health
     envVars:
@@ -15,12 +14,23 @@ services:
         sync: false # Set manually in Render dashboard with Supabase URL
       - key: SECRET_KEY
         generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 1440
       - key: GITHUB_TOKEN
-        sync: false # You must set this manually in Render dashboard
+        sync: false # Set manually in Render dashboard
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false
 
   # ------------------------------------
-  # 2. Frontend (Next.js)
+  # 2. Frontend (Next.js - Hosted on Vercel: https://fiyanz.my.id)
   # ------------------------------------
+  # Note: Frontend is managed on Vercel. Keep Render config if running Docker fallback.
   - type: web
     name: portofolio-frontend
     env: docker
@@ -29,7 +39,4 @@ services:
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        # In production, frontend will talk directly to the backend's Render URL
-        # instead of going through Nginx.
-        # Format is usually https://<backend-name>.onrender.com
-        value: https://portofolio-backend.onrender.com
+        value: https://my-porto-bta9.onrender.com

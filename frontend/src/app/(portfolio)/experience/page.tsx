@@ -37,7 +37,7 @@ export default async function Experience() {
     prs_merged: 0
   };
 
-  const orgs = Array.from(new Set(experiences.map((e: any) => e.institution).filter(Boolean)));
+  const orgs = Array.from(new Set(experiences.map((e: any) => e.institution).filter(Boolean))) as string[];
 
   return (
     <>
